@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Launchpad — Find your route</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #EDEEE3;
+  --card: #F6F5EC;
+  --ink: #1E2A22;
+  --ink-muted: #5B6358;
+  --border: #D7D5C4;
+  --gold: #B9862A;
+  --gold-deep: #96691C;
+  --route: #3F6C51;
+  --route-deep: #2E5240;
+  --blue: #3E6485;
+  --rust: #AF4A2E;
+
+  --font-display: "Newsreader", Georgia, serif;
+  --font-body: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --radius: 10px;
+  --wrap: 1080px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.55;
+  position: relative;
+}
+
+.wrap {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* faint topographic contour background */
+.contour-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-radial-gradient(circle at 12% 8%, rgba(63,108,81,0.05) 0, rgba(63,108,81,0.05) 1px, transparent 2px, transparent 42px),
+    repeating-radial-gradient(circle at 88% 92%, rgba(185,134,42,0.06) 0, rgba(185,134,42,0.06) 1px, transparent 2px, transparent 56px);
+}
+
+button, input, select { font-family: inherit; }
+
+/* ---------- header ---------- */
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: rgba(246,245,236,0.7);
+  backdrop-filter: blur(6px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark { color: var(--gold-deep); flex-shrink: 0; }
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand-tag {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+}
+.header-stats {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-align: right;
+  line-height: 1.6;
+}
+.header-stats strong { color: var(--gold-deep); }
+
+/* ---------- tabs ---------- */
+.tabs {
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+  position: sticky;
+  top: 63px;
+  z-index: 19;
+}
+.tabs-inner { display: flex; gap: 4px; }
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 14px 4px;
+  margin-right: 28px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--gold); }
+.tab-index {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold-deep);
+  margin-right: 6px;
+}
+
+/* ---------- views ---------- */
+main.wrap { padding-top: 40px; padding-bottom: 80px; min-height: 60vh; }
+.view { display: none; }
+.view.active { display: block; animation: fade-in 0.25s ease; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+
+.view-head { max-width: 640px; margin-bottom: 28px; }
+.view-head h1 {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+}
+.view-head p { color: var(--ink-muted); margin: 0; font-size: 15px; }
+
+/* ---------- controls: search + chips ---------- */
+.controls { margin-bottom: 28px; }
+.search-input {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  font-size: 14.5px;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(185,134,42,0.12);
+}
+.chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.chip:hover { border-color: var(--gold); color: var(--ink); }
+.chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* ---------- roadmap grid ---------- */
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.roadmap-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.roadmap-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  box-shadow: 0 6px 18px rgba(30,42,34,0.07);
+}
+.roadmap-card .rc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.roadmap-card .rc-icon { font-size: 26px; }
+.roadmap-card .rc-cat {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--route-deep);
+  background: rgba(63,108,81,0.09);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.roadmap-card h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 2px 0 0;
+}
+.roadmap-card p {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: 0;
+  flex-grow: 1;
+}
+.roadmap-card .rc-cta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--gold-deep);
+  margin-top: 4px;
+}
+
+.empty-note {
+  color: var(--ink-muted);
+  font-size: 14px;
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* ---------- back button ---------- */
+.back-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 22px;
+}
+.back-btn:hover { color: var(--gold-deep); }
+
+/* ---------- roadmap detail ---------- */
+.detail-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+.detail-head .dh-icon {
+  font-size: 40px;
+  flex-shrink: 0;
+}
+.detail-head h1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.detail-head .dh-cat {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--route-deep);
+  background: rgba(63,108,81,0.09);
+  padding: 3px 9px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.detail-blurb { color: var(--ink-muted); font-size: 15px; margin: 6px 0 36px; max-width: 620px; }
+
+/* trail timeline */
+.trail {
+  position: relative;
+  padding-left: 46px;
+}
+.trail::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background-image: linear-gradient(var(--border) 60%, transparent 0%);
+  background-size: 2px 10px;
+  background-repeat: repeat-y;
+}
+.trail-step { position: relative; padding-bottom: 34px; }
+.trail-step:last-child { padding-bottom: 0; }
+.trail-step .marker {
+  position: absolute;
+  left: -46px;
+  top: 2px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold-deep);
+  z-index: 1;
+}
+.trail-step:last-child .marker { border-color: var(--route); color: var(--route-deep); background: var(--card); }
+.step-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.step-phase {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold-deep);
+  margin-bottom: 4px;
+}
+.step-card h3 {
+  font-size: 17px;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.step-card p {
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin: 0 0 12px;
+}
+.resource-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.resource-pill {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--blue);
+  text-decoration: none;
+  background: rgba(62,100,133,0.06);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.resource-pill:hover { border-color: var(--blue); background: rgba(62,100,133,0.13); }
+
+/* ---------- prep guide grid ---------- */
+.prep-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.prep-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.prep-card:hover { transform: translateY(-2px); border-color: var(--gold); }
+.prep-card .pc-icon { font-size: 30px; display: block; margin-bottom: 10px; }
+.prep-card h3 { font-family: var(--font-display); font-size: 17px; margin: 0; font-weight: 600; }
+
+/* prep detail */
+.skills-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 30px;
+  max-width: 620px;
+}
+.skills-box h2 { font-size: 14px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); margin: 0 0 12px; }
+.skills-box ul { margin: 0; padding-left: 18px; }
+.skills-box li { margin-bottom: 6px; font-size: 14.5px; }
+
+.timeline-row {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.timeline-row:last-child { border-bottom: none; }
+.timeline-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--gold-deep);
+  min-width: 150px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.timeline-task { font-size: 14.5px; }
+
+/* ---------- opportunities ---------- */
+.opp-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 26px;
+  flex-wrap: wrap;
+}
+.opp-form input[type="text"] {
+  flex: 2 1 280px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  font-size: 14px;
+}
+.opp-form select {
+  flex: 1 1 160px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  font-size: 14px;
+}
+.opp-form button {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.opp-form button:hover { background: var(--route-deep); }
+.opp-form input:focus, .opp-form select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(185,134,42,0.12);
+}
+
+.opp-list { display: flex; flex-direction: column; gap: 10px; }
+.opp-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.opp-card .oc-main { flex: 1 1 240px; }
+.opp-card h4 { margin: 0 0 4px; font-size: 15.5px; font-weight: 600; }
+.opp-card .oc-type { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); }
+.status-select {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  cursor: pointer;
+}
+.status-select.status-saved { color: var(--ink-muted); }
+.status-select.status-preparing { color: var(--gold-deep); border-color: var(--gold); }
+.status-select.status-applied { color: var(--blue); border-color: var(--blue); }
+.status-select.status-done { color: var(--route-deep); border-color: var(--route); }
+
+.opp-card .oc-actions { display: flex; gap: 8px; align-items: center; }
+.link-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.link-btn:hover { border-color: var(--gold); color: var(--gold-deep); }
+.link-btn.danger:hover { border-color: var(--rust); color: var(--rust); }
+
+/* ---------- footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 22px 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 640px) {
+  .header-stats { display: none; }
+  .view-head h1 { font-size: 26px; }
+  .tabs-inner { overflow-x: auto; }
+  .tab-btn { margin-right: 18px; white-space: nowrap; }
+  .opp-form { flex-direction: column; }
+  .opp-form input, .opp-form select, .opp-form button { flex: 1 1 auto; width: 100%; }
+}
+
+.demo-banner { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); background: rgba(185,134,42,0.12); border-bottom: 1px solid var(--border); text-align: center; padding: 6px 10px; }
+</style>
+</head>
+<body>
+<div class="contour-bg" aria-hidden="true"></div>
+<div class="demo-banner">Live in-browser demo — all 113 roadmaps &amp; 8 prep guides are the real dataset, running client-side (no backend server needed)</div>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <div class="brand">
+      <svg class="brand-mark" width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="15" cy="15" r="13" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M15 4 L18 15 L15 26 L12 15 Z" fill="currentColor"/>
+        <circle cx="15" cy="15" r="2" fill="var(--paper)"/>
+      </svg>
+      <div>
+        <div class="brand-name">Launchpad</div>
+        <div class="brand-tag">plot your route from student to professional</div>
+      </div>
+    </div>
+    <div class="header-stats" id="header-stats" aria-live="polite"></div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap tabs-inner">
+    <button class="tab-btn active" data-view="roadmaps">
+      <span class="tab-index">01</span> Roadmaps
+    </button>
+    <button class="tab-btn" data-view="prep">
+      <span class="tab-index">02</span> Prep Guide
+    </button>
+    <button class="tab-btn" data-view="opportunities">
+      <span class="tab-index">03</span> My Opportunities
+    </button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section id="view-roadmaps" class="view active">
+    <div class="view-head">
+      <h1>Career roadmaps</h1>
+      <p>Every trail has five waypoints — Basecamp to Summit. Pick a destination and see exactly what to learn, in order.</p>
+    </div>
+
+    <div class="controls">
+      <input type="search" id="search-input" class="search-input" placeholder="Search a career — e.g. &ldquo;data scientist&rdquo;, &ldquo;chef&rdquo;, &ldquo;UPSC&rdquo;..." />
+      <div class="chip-row" id="category-chips"></div>
+    </div>
+
+    <div class="roadmap-grid" id="roadmap-grid"></div>
+    <p class="empty-note" id="roadmap-empty" hidden>No roadmaps match that search. Try a different keyword or clear the filter.</p>
+  </section>
+
+  <section id="view-detail" class="view">
+    <button class="back-btn" id="back-to-roadmaps">&larr; All roadmaps</button>
+    <div id="detail-content"></div>
+  </section>
+
+  <section id="view-prep" class="view">
+    <div class="view-head">
+      <h1>Prep guide</h1>
+      <p>Know what a hackathon or a case competition actually expects from you — and exactly how to get ready in time.</p>
+    </div>
+    <div class="prep-grid" id="prep-grid"></div>
+  </section>
+
+  <section id="view-prep-detail" class="view">
+    <button class="back-btn" id="back-to-prep">&larr; All prep guides</button>
+    <div id="prep-detail-content"></div>
+  </section>
+
+  <section id="view-opportunities" class="view">
+    <div class="view-head">
+      <h1>My opportunities</h1>
+      <p>Paste in anything you find — a hackathon, an internship posting, a scholarship — and get matched prep instantly.</p>
+    </div>
+
+    <form id="opportunity-form" class="opp-form">
+      <input type="text" id="opp-title" placeholder="Opportunity name — e.g. Smart India Hackathon 2026" required />
+      <select id="opp-type" required></select>
+      <button type="submit">Add &amp; match prep</button>
+    </form>
+
+    <div class="opp-list" id="opp-list"></div>
+    <p class="empty-note" id="opp-empty">Nothing saved yet — add your first opportunity above.</p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">Launchpad — built for students plotting their own route. Data is a starting point, not gospel — always cross-check deadlines on the official source.</div>
+</footer>
+
+<script>
+const DATA = {"roadmaps":[{"id":102,"title":"Agricultural Scientist","category":"Agriculture & Environment","icon":"\ud83c\udf3e","blurb":"Improve how we grow food sustainably and efficiently.","steps":[{"id":506,"order":1,"phase":"Basecamp","title":"Biology","description":"Biology, chemistry & agriculture fundamentals","resources":[{"name":"NCERT","url":"https://ncert.nic.in"},{"name":"ICAR","url":"https://icar.org.in"}]},{"id":507,"order":2,"phase":"First Ascent","title":"Agronomy","description":"Agronomy, soil science, crop management core coursework","resources":[{"name":"ICAR","url":"https://icar.org.in"},{"name":"NPTEL","url":"https://nptel.ac.in"}]},{"id":508,"order":3,"phase":"Gear Up","title":"Research methods","description":"Research methods, precision agriculture tools, data analysis","resources":[{"name":"ICAR","url":"https://icar.org.in"},{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"}]},{"id":509,"order":4,"phase":"Push Higher","title":"Run a real field trial or research project","description":"Run a real field trial or research project","resources":[{"name":"ICAR","url":"https://icar.org.in"},{"name":"Unstop","url":"https://unstop.com"}]},{"id":510,"order":5,"phase":"Summit","title":"Publish findings","description":"Publish findings, apply for research/extension roles","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]}]},{"id":105,"title":"Environmental Consultant","category":"Agriculture & Environment","icon":"\ud83c\udf0d","blurb":"Advise businesses and governments on environmental impact.","steps":[{"id":521,"order":1,"phase":"Basecamp","title":"Environmental science fundamentals","description":"Environmental science fundamentals, policy basics","resources":[{"name":"NCERT","url":"https://ncert.nic.in"},{"name":"NPTEL","url":"https://nptel.ac.in"}]},{"id":522,"order":2,"phase":"First Ascent","title":"Environmental impact assessment methods","description":"Environmental impact assessment methods, regulations","resources":[{"name":"NPTEL","url":"https://nptel.ac.in"},{"name":"National Geographic Learning","url":"https://www.natgeo.com"}]},{"id":523,"order":3,"phase":"Gear Up","title":"Data analysis for environmental reporting","description":"Data analysis for environmental reporting, sustainability frameworks (ESG)","resources":[{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"},{"name":"Coursera","url":"https://www.coursera.org"}]},{"id":524,"order":4,"phase":"Push Higher","title":"Complete a real environmental assessment or sustainability audit","description":"Complete a real environmental assessment or sustainability audit","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]},{"id":525,"order":5,"phase":"Summit","title":"Certification","description":"Certification, job applications at consultancies/NGOs","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]}]},{"id":104,"title":"Forestry Manager","category":"Agriculture & Environment","icon":"\ud83c\udf32","blurb":"Manage forests for ecology, economy and community.","steps":[{"id":516,"order":1,"phase":"Basecamp","title":"Ecology & environmental science fundamentals","description":"Ecology & environmental science fundamentals","resources":[{"name":"NCERT","url":"https://ncert.nic.in"},{"name":"National Geographic Learning","url":"https://www.natgeo.com"}]},{"id":517,"order":2,"phase":"First Ascent","title":"Forestry coursework: silviculture","description":"Forestry coursework: silviculture, forest measurement","resources":[{"name":"NPTEL","url":"https://nptel.ac.in"},{"name":"ICAR","url":"https://icar.org.in"}]},{"id":518,"order":3,"phase":"Gear Up","title":"GIS & remote sensing for forestry","description":"GIS & remote sensing for forestry, conservation policy basics","resources":[{"name":"NPTEL","url":"https://nptel.ac.in"},{"name":"National Geographic Learning","url":"https://www.natgeo.com"}]},{"id":519,"order":4,"phase":"Push Higher","title":"Complete a real fieldwork project or internship with a forestry dept/NGO","description":"Complete a real fieldwork project or internship with a forestry dept/NGO","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]},{"id":520,"order":5,"phase":"Summit","title":"Certification","description":"Certification, job applications (forest services, conservation orgs)","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]}]},{"id":103,"title":"Sustainable Farming Specialist","category":"Agriculture & Environment","icon":"\ud83d\ude9c","blurb":"Help farms grow more with less environmental cost.","steps":[{"id":511,"order":1,"phase":"Basecamp","title":"Agriculture fundamentals","description":"Agriculture fundamentals, sustainability principles","resources":[{"name":"ICAR","url":"https://icar.org.in"},{"name":"NCERT","url":"https://ncert.nic.in"}]},{"id":512,"order":2,"phase":"First Ascent","title":"Organic farming techniques","description":"Organic farming techniques, soil health, water management","resources":[{"name":"ICAR","url":"https://icar.org.in"},{"name":"NPTEL","url":"https://nptel.ac.in"}]},{"id":513,"order":3,"phase":"Gear Up","title":"Sustainable certification standards","description":"Sustainable certification standards, farm economics basics","resources":[{"name":"ICAR","url":"https://icar.org.in"},{"name":"National Geographic Learning","url":"https://www.natgeo.com"}]},{"id":514,"order":4,"phase":"Push Higher","title":"Work on/consult for a real farm implementing sustainable practices","description":"Work on/consult for a real farm implementing sustainable practices","resources":[{"name":"ICAR","url":"https://icar.org.in"},{"name":"Unstop","url":"https://unstop.com"}]},{"id":515,"order":5,"phase":"Summit","title":"Certification","description":"Certification, job applications with agri-businesses/NGOs","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]}]},{"id":57,"title":"Cloud Engineer","category":"Cybersecurity & IT","icon":"\u2601\ufe0f","blurb":"Design and manage infrastructure on cloud platforms.","steps":[{"id":281,"order":1,"phase":"Basecamp","title":"Networking fundamentals","description":"Networking fundamentals, Linux basics, one cloud provider overview","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"}]},{"id":282,"order":2,"phase":"First Ascent","title":"Core cloud services: compute","description":"Core cloud services: compute, storage, networking, IAM","resources":[{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"},{"name":"Google Cloud Skills","url":"https://www.cloudskillsboost.google"}]},{"id":283,"order":3,"phase":"Gear Up","title":"Infrastructure as Code (Terraform)","description":"Infrastructure as Code (Terraform), containers, monitoring","resources":[{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"},{"name":"GitHub","url":"https://github.com"}]},{"id":284,"order":4,"phase":"Push Higher","title":"Deploy a real multi-service app on the cloud","description":"Deploy a real multi-service app on the cloud, secure it properly","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"}]},{"id":285,"order":5,"phase":"Summit","title":"Cloud associate certification","description":"Cloud associate certification, interview prep","resources":[{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":55,"title":"Cybersecurity Analyst","category":"Cybersecurity & IT","icon":"\ud83d\udee1\ufe0f","blurb":"Defend systems and data against threats.","steps":[{"id":271,"order":1,"phase":"Basecamp","title":"Networking fundamentals","description":"Networking fundamentals, OS basics (Linux), security concepts","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"}]},{"id":272,"order":2,"phase":"First Ascent","title":"Security tools","description":"Security tools, common vulnerabilities (OWASP Top 10), SOC basics","resources":[{"name":"OWASP","url":"https://owasp.org"},{"name":"TryHackMe","url":"https://tryhackme.com"}]},{"id":273,"order":3,"phase":"Gear Up","title":"Threat detection","description":"Threat detection, incident response, SIEM basics","resources":[{"name":"TryHackMe","url":"https://tryhackme.com"},{"name":"Cisco Networking Academy","url":"https://www.netacad.com"}]},{"id":274,"order":4,"phase":"Push Higher","title":"Complete 10-15 hands-on labs/CTFs","description":"Complete 10-15 hands-on labs/CTFs, document write-ups","resources":[{"name":"TryHackMe","url":"https://tryhackme.com"},{"name":"GitHub","url":"https://github.com"}]},{"id":275,"order":5,"phase":"Summit","title":"Security+ certification prep","description":"Security+ certification prep, interview practice","resources":[{"name":"TryHackMe","url":"https://tryhackme.com"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":56,"title":"Ethical Hacker / Penetration Tester","category":"Cybersecurity & IT","icon":"\ud83d\udd75\ufe0f","blurb":"Break into systems (legally) to help fix them before attackers do.","steps":[{"id":276,"order":1,"phase":"Basecamp","title":"Networking","description":"Networking, Linux, and web fundamentals","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"}]},{"id":277,"order":2,"phase":"First Ascent","title":"Web app security basics","description":"Web app security basics, common attack techniques","resources":[{"name":"PortSwigger Academy","url":"https://portswigger.net/web-security"},{"name":"OWASP","url":"https://owasp.org"}]},{"id":278,"order":3,"phase":"Gear Up","title":"Hands-on penetration testing labs","description":"Hands-on penetration testing labs, tools (Burp Suite, Nmap)","resources":[{"name":"PortSwigger Academy","url":"https://portswigger.net/web-security"},{"name":"TryHackMe","url":"https://tryhackme.com"}]},{"id":279,"order":4,"phase":"Push Higher","title":"Complete 20+ CTF challenges","description":"Complete 20+ CTF challenges, write detailed reports","resources":[{"name":"TryHackMe","url":"https://tryhackme.com"},{"name":"GitHub","url":"https://github.com"}]},{"id":280,"order":5,"phase":"Summit","title":"CEH/OSCP-lite prep","description":"CEH/OSCP-lite prep, bug bounty participation, interview prep","resources":[{"name":"TryHackMe","url":"https://tryhackme.com"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":60,"title":"IT Support Specialist","category":"Cybersecurity & IT","icon":"\ud83e\uddf0","blurb":"Be the first line of help when technology breaks.","steps":[{"id":296,"order":1,"phase":"Basecamp","title":"Computer fundamentals","description":"Computer fundamentals, OS basics, common troubleshooting","resources":[{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"},{"name":"Microsoft Learn","url":"https://learn.microsoft.com"}]},{"id":297,"order":2,"phase":"First Ascent","title":"Networking basics","description":"Networking basics, ticketing systems, customer communication","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]},{"id":298,"order":3,"phase":"Gear Up","title":"Hardware basics","description":"Hardware basics, remote support tools, security awareness","resources":[{"name":"Microsoft Learn","url":"https://learn.microsoft.com"},{"name":"OWASP","url":"https://owasp.org"}]},{"id":299,"order":4,"phase":"Push Higher","title":"Volunteer/intern doing real IT support","description":"Volunteer/intern doing real IT support, log and solve real tickets","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]},{"id":300,"order":5,"phase":"Summit","title":"CompTIA A+-lite prep","description":"CompTIA A+-lite prep, interview practice","resources":[{"name":"Microsoft Learn","url":"https://learn.microsoft.com"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":58,"title":"Network Engineer","category":"Cybersecurity & IT","icon":"\ud83c\udf10","blurb":"Design and maintain the networks that connect everything.","steps":[{"id":286,"order":1,"phase":"Basecamp","title":"Networking fundamentals: OSI model","description":"Networking fundamentals: OSI model, TCP/IP, subnetting","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"}]},{"id":287,"order":2,"phase":"First Ascent","title":"Routing & switching basics","description":"Routing & switching basics, hands-on with Packet Tracer","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"YouTube","url":"https://www.youtube.com"}]},{"id":288,"order":3,"phase":"Gear Up","title":"Network security basics","description":"Network security basics, wireless networking, troubleshooting","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"OWASP","url":"https://owasp.org"}]},{"id":289,"order":4,"phase":"Push Higher","title":"Set up and troubleshoot a lab network end-to-end","description":"Set up and troubleshoot a lab network end-to-end","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"GitHub","url":"https://github.com"}]},{"id":290,"order":5,"phase":"Summit","title":"CCNA-lite prep","description":"CCNA-lite prep, interview practice","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":59,"title":"System Administrator","category":"Cybersecurity & IT","icon":"\ud83d\udda5\ufe0f","blurb":"Keep servers, systems and user accounts running smoothly.","steps":[{"id":291,"order":1,"phase":"Basecamp","title":"Operating systems fundamentals (Linux & Windows Server)","description":"Operating systems fundamentals (Linux & Windows Server)","resources":[{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"},{"name":"Microsoft Learn","url":"https://learn.microsoft.com"}]},{"id":292,"order":2,"phase":"First Ascent","title":"User management","description":"User management, scripting for automation, backups","resources":[{"name":"Microsoft Learn","url":"https://learn.microsoft.com"},{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"}]},{"id":293,"order":3,"phase":"Gear Up","title":"Networking basics","description":"Networking basics, security hardening, virtualization","resources":[{"name":"Cisco Networking Academy","url":"https://www.netacad.com"},{"name":"Microsoft Learn","url":"https://learn.microsoft.com"}]},{"id":294,"order":4,"phase":"Push Higher","title":"Set up and manage a small lab environment end-to-end","description":"Set up and manage a small lab environment end-to-end","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"Microsoft Learn","url":"https://learn.microsoft.com"}]},{"id":295,"order":5,"phase":"Summit","title":"Certification prep (CompTIA-lite)","description":"Certification prep (CompTIA-lite), interview practice","resources":[{"name":"Microsoft Learn","url":"https://learn.microsoft.com"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":13,"title":"AI Engineer","category":"Data & AI","icon":"\ud83e\udd16","blurb":"Design and build systems that learn from data and make intelligent decisions.","steps":[{"id":61,"order":1,"phase":"Basecamp","title":"Python","description":"Python, statistics & probability, linear algebra basics","resources":[{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"},{"name":"Khan Academy","url":"https://www.khanacademy.org"}]},{"id":62,"order":2,"phase":"First Ascent","title":"Machine learning fundamentals: regression","description":"Machine learning fundamentals: regression, classification, model evaluation","resources":[{"name":"Coursera ML/AI","url":"https://www.coursera.org/browse/data-science/machine-learning"},{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"}]},{"id":63,"order":3,"phase":"Gear Up","title":"Deep learning frameworks (PyTorch/TensorFlow)","description":"Deep learning frameworks (PyTorch/TensorFlow), neural networks","resources":[{"name":"PyTorch Tutorials","url":"https://pytorch.org/tutorials"},{"name":"TensorFlow","url":"https://www.tensorflow.org/learn"}]},{"id":64,"order":4,"phase":"Push Higher","title":"Build 3-4 ML projects end-to-end","description":"Build 3-4 ML projects end-to-end, enter a Kaggle competition","resources":[{"name":"Kaggle","url":"https://www.kaggle.com"},{"name":"GitHub","url":"https://github.com"}]},{"id":65,"order":5,"phase":"Summit","title":"LLMs & transformers basics","description":"LLMs & transformers basics, MLOps fundamentals, interview prep","resources":[{"name":"HuggingFace","url":"https://huggingface.co/learn"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":22,"title":"AI Research Scientist","category":"Data & AI","icon":"\ud83d\udd2c","blurb":"Push the boundary of what machine learning models can do.","steps":[{"id":106,"order":1,"phase":"Basecamp","title":"Strong math foundation: linear algebra","description":"Strong math foundation: linear algebra, calculus, probability","resources":[{"name":"Khan Academy","url":"https://www.khanacademy.org"},{"name":"NPTEL","url":"https://nptel.ac.in"}]},{"id":107,"order":2,"phase":"First Ascent","title":"Deep learning theory","description":"Deep learning theory, read and reproduce papers","resources":[{"name":"PyTorch Tutorials","url":"https://pytorch.org/tutorials"},{"name":"Fast.ai","url":"https://www.fast.ai"}]},{"id":108,"order":3,"phase":"Gear Up","title":"Pick a subfield (NLP/CV/RL)","description":"Pick a subfield (NLP/CV/RL), implement 2-3 papers from scratch","resources":[{"name":"HuggingFace","url":"https://huggingface.co/learn"},{"name":"GitHub","url":"https://github.com"}]},{"id":109,"order":4,"phase":"Push Higher","title":"Original small research project","description":"Original small research project, write it up properly","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"Kaggle","url":"https://www.kaggle.com"}]},{"id":110,"order":5,"phase":"Summit","title":"Submit to a workshop/conference","description":"Submit to a workshop/conference, apply for research internships","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"GitHub","url":"https://github.com"}]}]},{"id":21,"title":"Business Intelligence Analyst","category":"Data & AI","icon":"\ud83d\udcc9","blurb":"Build the reporting layer that leadership actually reads.","steps":[{"id":101,"order":1,"phase":"Basecamp","title":"Excel","description":"Excel, SQL fundamentals, business metrics literacy","resources":[{"name":"Khan Academy","url":"https://www.khanacademy.org"},{"name":"GeeksforGeeks","url":"https://www.geeksforgeeks.org"}]},{"id":102,"order":2,"phase":"First Ascent","title":"Data modeling basics","description":"Data modeling basics, ETL concepts, one BI tool (Power BI)","resources":[{"name":"Coursera","url":"https://www.coursera.org"},{"name":"Microsoft Learn","url":"https://learn.microsoft.com"}]},{"id":103,"order":3,"phase":"Gear Up","title":"Advanced DAX/measures","description":"Advanced DAX/measures, dashboard design principles","resources":[{"name":"Microsoft Learn","url":"https://learn.microsoft.com"},{"name":"YouTube","url":"https://www.youtube.com"}]},{"id":104,"order":4,"phase":"Push Higher","title":"Build 2-3 polished dashboards solving a real business question","description":"Build 2-3 polished dashboards solving a real business question","resources":[{"name":"Kaggle","url":"https://www.kaggle.com"},{"name":"GitHub","url":"https://github.com"}]},{"id":105,"order":5,"phase":"Summit","title":"Stakeholder communication practice","description":"Stakeholder communication practice, case interview prep","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]}]},{"id":19,"title":"Computer Vision Engineer","category":"Data & AI","icon":"\ud83d\udc41\ufe0f","blurb":"Teach machines to interpret and act on visual data.","steps":[{"id":91,"order":1,"phase":"Basecamp","title":"Python","description":"Python, linear algebra, image processing basics","resources":[{"name":"Khan Academy","url":"https://www.khanacademy.org"},{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"}]},{"id":92,"order":2,"phase":"First Ascent","title":"CNNs","description":"CNNs, classic CV techniques (OpenCV)","resources":[{"name":"PyTorch Tutorials","url":"https://pytorch.org/tutorials"},{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"}]},{"id":93,"order":3,"phase":"Gear Up","title":"Object detection","description":"Object detection, segmentation, transfer learning","resources":[{"name":"PyTorch Tutorials","url":"https://pytorch.org/tutorials"},{"name":"TensorFlow","url":"https://www.tensorflow.org/learn"}]},{"id":94,"order":4,"phase":"Push Higher","title":"Build a real-time detection or classification project","description":"Build a real-time detection or classification project, deploy it","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"Kaggle","url":"https://www.kaggle.com"}]},{"id":95,"order":5,"phase":"Summit","title":"Model optimization for edge devices","description":"Model optimization for edge devices, interview prep","resources":[{"name":"TensorFlow","url":"https://www.tensorflow.org/learn"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":16,"title":"Data Analyst","category":"Data & AI","icon":"\ud83d\udcc8","blurb":"Answer business questions using data, spreadsheets and dashboards.","steps":[{"id":76,"order":1,"phase":"Basecamp","title":"Excel/Google Sheets mastery","description":"Excel/Google Sheets mastery, basic statistics","resources":[{"name":"Khan Academy","url":"https://www.khanacademy.org"},{"name":"Coursera","url":"https://www.coursera.org"}]},{"id":77,"order":2,"phase":"First Ascent","title":"SQL for querying","description":"SQL for querying, data cleaning fundamentals","resources":[{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"},{"name":"GeeksforGeeks","url":"https://www.geeksforgeeks.org"}]},{"id":78,"order":3,"phase":"Gear Up","title":"Dashboarding tools (Power BI or Tableau)","description":"Dashboarding tools (Power BI or Tableau), data storytelling","resources":[{"name":"Coursera","url":"https://www.coursera.org"},{"name":"YouTube","url":"https://www.youtube.com"}]},{"id":79,"order":4,"phase":"Push Higher","title":"Build 2-3 dashboards from public datasets","description":"Build 2-3 dashboards from public datasets, publish case studies","resources":[{"name":"Kaggle","url":"https://www.kaggle.com"},{"name":"GitHub","url":"https://github.com"}]},{"id":80,"order":5,"phase":"Summit","title":"Business-case interview prep","description":"Business-case interview prep, portfolio site, resume polish","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"LinkedIn Learning","url":"https://www.linkedin.com/learning"}]}]},{"id":17,"title":"Data Engineer","category":"Data & AI","icon":"\ud83d\udee0\ufe0f","blurb":"Build the pipelines that move and shape data at scale.","steps":[{"id":81,"order":1,"phase":"Basecamp","title":"Python","description":"Python, SQL, data structures fundamentals","resources":[{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"},{"name":"GeeksforGeeks","url":"https://www.geeksforgeeks.org"}]},{"id":82,"order":2,"phase":"First Ascent","title":"ETL concepts","description":"ETL concepts, relational & NoSQL databases, data warehousing basics","resources":[{"name":"Coursera","url":"https://www.coursera.org"},{"name":"NPTEL","url":"https://nptel.ac.in"}]},{"id":83,"order":3,"phase":"Gear Up","title":"Big data tools (Spark basics)","description":"Big data tools (Spark basics), orchestration (Airflow), cloud storage","resources":[{"name":"Google Cloud Skills","url":"https://www.cloudskillsboost.google"},{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"}]},{"id":84,"order":4,"phase":"Push Higher","title":"Build an end-to-end pipeline ingesting and transforming real data","description":"Build an end-to-end pipeline ingesting and transforming real data","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"Kaggle","url":"https://www.kaggle.com"}]},{"id":85,"order":5,"phase":"Summit","title":"Cloud data certification","description":"Cloud data certification, system design interview prep","resources":[{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":15,"title":"Data Scientist","category":"Data & AI","icon":"\ud83d\udcca","blurb":"Turn messy data into decisions and predictions that matter.","steps":[{"id":71,"order":1,"phase":"Basecamp","title":"Python/R","description":"Python/R, statistics, SQL fundamentals","resources":[{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"},{"name":"Khan Academy","url":"https://www.khanacademy.org"}]},{"id":72,"order":2,"phase":"First Ascent","title":"Exploratory data analysis","description":"Exploratory data analysis, data visualization, hypothesis testing","resources":[{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"},{"name":"DataCamp","url":"https://www.datacamp.com"}]},{"id":73,"order":3,"phase":"Gear Up","title":"Machine learning modeling","description":"Machine learning modeling, feature engineering, experiment design","resources":[{"name":"Coursera ML/AI","url":"https://www.coursera.org/browse/data-science/machine-learning"},{"name":"Kaggle","url":"https://www.kaggle.com"}]},{"id":74,"order":4,"phase":"Push Higher","title":"Complete 3+ end-to-end analyses with real datasets","description":"Complete 3+ end-to-end analyses with real datasets, publish on GitHub","resources":[{"name":"Kaggle","url":"https://www.kaggle.com"},{"name":"GitHub","url":"https://github.com"}]},{"id":75,"order":5,"phase":"Summit","title":"Business storytelling with data","description":"Business storytelling with data, case study interviews, portfolio","resources":[{"name":"Unstop","url":"https://unstop.com"},{"name":"GitHub","url":"https://github.com"}]}]},{"id":20,"title":"MLOps Engineer","category":"Data & AI","icon":"\ud83d\udd01","blurb":"Keep machine learning systems running reliably in production.","steps":[{"id":96,"order":1,"phase":"Basecamp","title":"Python","description":"Python, Linux basics, ML fundamentals","resources":[{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"},{"name":"Coursera ML/AI","url":"https://www.coursera.org/browse/data-science/machine-learning"}]},{"id":97,"order":2,"phase":"First Ascent","title":"Docker","description":"Docker, CI/CD for ML, model versioning (DVC/MLflow)","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"Google Cloud Skills","url":"https://www.cloudskillsboost.google"}]},{"id":98,"order":3,"phase":"Gear Up","title":"Kubernetes basics","description":"Kubernetes basics, model monitoring, feature stores","resources":[{"name":"Google Cloud Skills","url":"https://www.cloudskillsboost.google"},{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"}]},{"id":99,"order":4,"phase":"Push Higher","title":"Build a full ML pipeline: train","description":"Build a full ML pipeline: train, version, deploy, monitor","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"}]},{"id":100,"order":5,"phase":"Summit","title":"Cloud ML certification","description":"Cloud ML certification, interview prep, portfolio","resources":[{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":14,"title":"Machine Learning Engineer","category":"Data & AI","icon":"\ud83e\udde0","blurb":"Take ML models from notebook to production system.","steps":[{"id":66,"order":1,"phase":"Basecamp","title":"Python","description":"Python, statistics, data structures & algorithms","resources":[{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"},{"name":"LeetCode","url":"https://leetcode.com"}]},{"id":67,"order":2,"phase":"First Ascent","title":"Core ML algorithms","description":"Core ML algorithms, feature engineering, scikit-learn","resources":[{"name":"Coursera ML/AI","url":"https://www.coursera.org/browse/data-science/machine-learning"},{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"}]},{"id":68,"order":3,"phase":"Gear Up","title":"Deep learning","description":"Deep learning, model deployment basics (Flask/FastAPI + Docker)","resources":[{"name":"PyTorch Tutorials","url":"https://pytorch.org/tutorials"},{"name":"freeCodeCamp","url":"https://www.freecodecamp.org/learn"}]},{"id":69,"order":4,"phase":"Push Higher","title":"Deploy a trained model as a live API","description":"Deploy a trained model as a live API, monitor its performance","resources":[{"name":"GitHub","url":"https://github.com"},{"name":"AWS Skill Builder","url":"https://skillbuilder.aws"}]},{"id":70,"order":5,"phase":"Summit","title":"MLOps pipelines","description":"MLOps pipelines, A/B testing concepts, system design interview prep","resources":[{"name":"Google Cloud Skills","url":"https://www.cloudskillsboost.google"},{"name":"Unstop","url":"https://unstop.com"}]}]},{"id":18,"title":"NLP Engineer","category":"Data & AI","icon":"\ud83d\udcac","blurb":"Build systems that understand and generate human language.","steps":[{"id":86,"order":1,"phase":"Basecamp","title":"Python","description":"Python, linear algebra & probability, ML fundamentals","resources":[{"name":"Khan Academy","url":"https://www.khanacademy.org"},{"name":"Coursera ML/AI","url":"https://www.coursera.org/browse/data-science/machine-learning"}]},{"id":87,"order":2,"phase":"First Ascent","title":"Classic NLP: tokenization","description":"Classic NLP: tokenization, embeddings, sequence models","resources":[{"name":"HuggingFace","url":"https://huggingface.co/learn"},{"name":"Kaggle Learn","url":"https://www.kaggle.com/learn"}]},{"id":88,"order":3,"phase":"Gear Up","title":"Transformers","description":"Transformers, fine-tuning, prompt engineering basics","resources":[{"name":"HuggingFace","url":"https://huggingface.co/learn"},{"name":"PyTorch Tutorials","url":"https://pytorch.org/tutorials"}]},{"id":89,"order":4,"phase":"Push Higher","title":"Build 2-3 NLP projects: chatbot","description":"Build 2-3 NLP projects: chatbot, summarizer, classifier","resources":[{"name":"HuggingFace","url":"https://huggingface.co/lea
+
+---
+*Content truncated for display.*
